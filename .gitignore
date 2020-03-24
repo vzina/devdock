@@ -5,4 +5,5 @@
 /.project
 .docker-sync
 /jenkins/jenkins_home
-nginx/hosts
+nginx/sites/*.conf
+php-worker/supervisord.d/*.conf

@@ -81,6 +81,7 @@ services:
         - TZ=${TIMEZONE}
     volumes:
       - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}
+      - ${PHP_WORKER_LOG_PATH}:/data/logs
       - ./php-worker/supervisord.d:/etc/supervisord.d
     depends_on:
       - workspace

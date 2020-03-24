@@ -4,8 +4,6 @@ FROM laradock/workspace:2.6.1-${DEVDOCK_PHP_VERSION}
 
 LABEL maintainer="Weijian Ye <yeweijian299@163.com>"
 
-ARG DEVDOCK_PHP_VERSION
-
 # Set Environment Variables
 ENV DEBIAN_FRONTEND noninteractive
 

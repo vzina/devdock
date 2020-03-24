@@ -1,5 +1,5 @@
 # 本地映射目录
-APP_CODE_PATH_HOST=/Users/yeweijian/Public/Data/docker/github.com/vzina/demo
+APP_CODE_PATH_HOST=~/demo
 
 # 容器工作目录
 APP_CODE_PATH_CONTAINER=/data/web

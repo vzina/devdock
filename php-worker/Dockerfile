@@ -4,6 +4,9 @@ FROM php:${PHP_VERSION}-alpine
 
 LABEL maintainer="Weijian Ye <yeweijian299@163.com>"
 
+# Set Environment Variables
+ENV DEBIAN_FRONTEND noninteractive
+
 # If you're in China, or you need to change sources, will be set CHANGE_SOURCE to true in .env.
 
 ARG CHANGE_SOURCE=false
