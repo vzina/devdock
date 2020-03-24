@@ -23,8 +23,8 @@ RUN apt-get update -yqq && \
     apt-get install -y iputils-ping libevent-dev zlib1g-dev wget && \
     pecl channel-update pecl.php.net && \
     groupadd -g ${PGID} devdock && \
-    useradd -u ${PUID} -g devdock -m devdock -G docker_env && \
-    usermod -p "123456" devdock
+    useradd -u ${PUID} -g devdock -m devdock -G docker_env -s /bin/bash && \
+    usermod -p "*" devdock
 
 ###########################################################################
 # Set Timezone

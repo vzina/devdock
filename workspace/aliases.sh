@@ -142,6 +142,3 @@ function fs() {
 		du $arg .[^.]* ./*;
 	fi;
 }
-
-# 本地环境
-export KPHP_ENV=dev

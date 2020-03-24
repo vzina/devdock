@@ -1,6 +1,6 @@
 ARG DEVDOCK_PHP_VERSION
 
-FROM laradock/php-fpm:2.2-${DEVDOCK_PHP_VERSION}
+FROM laradock/php-fpm:2.7-${DEVDOCK_PHP_VERSION}
 
 LABEL maintainer="Weijian Ye <yeweijian299@163.com>"
 
