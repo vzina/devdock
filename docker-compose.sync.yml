@@ -1,0 +1,8 @@
+docker-compose.sync.ymldocker-compose.sync.ymlversion: '3'
+
+services:
+
+volumes:
+  applications-sync:
+    external:
+      name: "applications-docker-sync"
