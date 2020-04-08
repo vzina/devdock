@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 
-SHELL_FOLDER=$(cd "$(dirname "$0")";pwd)
+SHELL_FILE=~/.ssh/insecure_id_rsa
+
+if [ ! -f "$SHELL_FILE" ]; then
+	SHELL_FILE=$(cd "$(dirname "$0")";pwd)/insecure_id_rsa
+fi
 
 # 登录workspace
 ssh -o PasswordAuthentication=no \
   -o StrictHostKeyChecking=no \
   -o UserKnownHostsFile=/dev/null \
   -p 2222 \
-  -i $SHELL_FOLDER/insecure_id_rsa \
+  -i $SHELL_FILE \
   devdock@localhost
