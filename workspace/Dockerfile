@@ -183,6 +183,22 @@ RUN if [ ${INSTALL_SWOOLE} = true ]; then \
     ln -s /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/swoole.ini /etc/php/${DEVDOCK_PHP_VERSION}/cli/conf.d/20-swoole.ini \
 ;fi
 
+
+###########################################################################
+# PHP MEMCACHED EXTENSION
+###########################################################################
+USER root
+
+ARG INSTALL_MEMCACHED=false
+
+RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
+    apt-get install -y libmemcached-dev && \
+    # Install Php Redis extension
+    printf "\n" | pecl -q install -o -f memcached && \
+    echo "extension=memcached.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/memcached.ini && \
+    phpenmod memcached \
+;fi
+
 ###########################################################################
 # Check PHP version:
 ###########################################################################

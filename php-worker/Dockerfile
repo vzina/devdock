@@ -83,6 +83,28 @@ RUN if [ ${INSTALL_SWOOLE} = true ]; then \
         php --ri swoole \
 ;fi
 
+###########################################################################
+# PHP REDIS EXTENSION
+###########################################################################
+ARG INSTALL_PHPREDIS=false
+
+RUN if [ ${INSTALL_PHPREDIS} = true ]; then \
+    # Install Php Redis extension
+    pecl install redis \
+    && docker-php-ext-enable redis \
+;fi
+
+###########################################################################
+# PHP MEMCACHED EXTENSION
+###########################################################################
+ARG INSTALL_MEMCACHED=false
+
+RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
+    # Install Php Redis extension
+    pecl -q install -o -f memcached \
+    && docker-php-ext-enable memcached \
+;fi
+
 
 RUN rm /var/cache/apk/* \
     && mkdir -p /var/www
