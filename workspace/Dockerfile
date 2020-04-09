@@ -208,14 +208,14 @@ USER root
 ARG INSTALL_IMAP=false
 
 RUN if [ ${INSTALL_IMAP} = true ]; then \
-    apt-get install -y php${LARADOCK_PHP_VERSION}-imap \
+    apt-get install -y php${DEVDOCK_PHP_VERSION}-imap \
 ;fi
 
 ###########################################################################
 # Check PHP version:
 ###########################################################################
 
-RUN php -v | head -n 1 | grep -q "PHP ${LARADOCK_PHP_VERSION}."
+RUN php -v | head -n 1 | grep -q "PHP ${DEVDOCK_PHP_VERSION}."
 
 # Clean up
 RUN apt-get clean && \
