@@ -195,8 +195,20 @@ RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
     apt-get install -y libmemcached-dev && \
     # Install Php Redis extension
     printf "\n" | pecl -q install -o -f memcached && \
-    echo "extension=memcached.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/memcached.ini && \
+    # echo "extension=memcached.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/memcached.ini && \
     phpenmod memcached \
+;fi
+
+
+###########################################################################
+# PHP IMAP EXTENSION
+###########################################################################
+USER root
+
+ARG INSTALL_IMAP=false
+
+RUN if [ ${INSTALL_IMAP} = true ]; then \
+    apt-get install -y php${LARADOCK_PHP_VERSION}-imap \
 ;fi
 
 ###########################################################################
