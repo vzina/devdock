@@ -72,7 +72,11 @@ ARG INSTALL_SWOOLE=false
 
 RUN if [ ${INSTALL_SWOOLE} = true ]; then \
     # Install PHP Swoole Extension
-    cd /tmp && wget https://pecl.php.net/get/swoole-4.4.16.tgz && \
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        pecl -q install -o -f swoole-2.0.11 && \
+        docker-php-ext-enable swoole; \
+    else \
+        cd /tmp && wget https://pecl.php.net/get/swoole-4.4.16.tgz && \
         tar zxf swoole-4.4.16.tgz && \
         cd swoole-4.4.16  && \
         phpize  && \
@@ -80,31 +84,58 @@ RUN if [ ${INSTALL_SWOOLE} = true ]; then \
         make && make install && \
         docker-php-ext-enable swoole && \
         echo 'swoole.use_shortname = off' >> /usr/local/etc/php/php.ini && \
-        php --ri swoole \
+        php --ri swoole; \
+    fi
 ;fi
 
 ###########################################################################
 # PHP REDIS EXTENSION
 ###########################################################################
+
 ARG INSTALL_PHPREDIS=false
 
 RUN if [ ${INSTALL_PHPREDIS} = true ]; then \
     # Install Php Redis extension
-    pecl install redis \
-    && docker-php-ext-enable redis \
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        printf "\n" | pecl -q install -o -f redis-4.2.0; \
+    else \
+        printf "\n" | pecl -q install -o -f redis; \
+    fi && \
+    docker-php-ext-enable redis \
 ;fi
 
 ###########################################################################
 # PHP MEMCACHED EXTENSION
 ###########################################################################
+
 ARG INSTALL_MEMCACHED=false
 
 RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
     # Install Php Redis extension
-    pecl -q install -o -f memcached \
-    && docker-php-ext-enable memcached \
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        printf "\n" | pecl -q install -o -f memcached-3.0.4; \
+    else \
+        printf "\n" | pecl -q install -o -f memcached; \
+    fi &&\
+    docker-php-ext-enable memcached \
 ;fi
 
+###########################################################################
+# PHP MEMCACHE EXTENSION
+###########################################################################
+
+ARG INSTALL_MEMCACHE=false
+
+RUN if [ ${INSTALL_MEMCACHE} = true ]; then \
+    # Install Php Memcache extension
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        printf "\n" | pecl -q install -o -f memcache-2.2.7; \
+    else \
+        printf "\n" | pecl -q install -o -f memcache; \
+    fi && \
+    # echo "extension=memcache.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/memcache.ini && \
+    phpenmod memcache \
+;fi
 
 RUN rm /var/cache/apk/* \
     && mkdir -p /var/www

@@ -7,6 +7,16 @@ LABEL maintainer="Weijian Ye <yeweijian299@163.com>"
 # Set Environment Variables
 ENV DEBIAN_FRONTEND noninteractive
 
+# If you're in China, or you need to change sources, will be set CHANGE_SOURCE to true in .env.
+
+ARG CHANGE_SOURCE=false
+RUN if [ ${CHANGE_SOURCE} = true ]; then \
+    # Change application source from deb.debian.org to aliyun source
+    sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list && \
+    sed -i 's/security.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list && \
+    sed -i 's/security-cdn.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list \
+;fi
+
 ARG DEVDOCK_PHP_VERSION
 
 # Start as root
@@ -18,9 +28,19 @@ ENV PUID ${PUID}
 ARG PGID=1000
 ENV PGID ${PGID}
 
+ARG CHANGE_SOURCE=false
+ARG UBUNTU_SOURCE
+COPY ./sources.sh /tmp/sources.sh
+
+RUN if [ ${CHANGE_SOURCE} = true ]; then \
+    chmod +x /tmp/sources.sh && \
+    /bin/sh -c /tmp/sources.sh && \
+    rm -rf /tmp/sources.sh \
+;fi
+
 # always run apt update when start and after add new source list, then clean up at end.
 RUN apt-get update -yqq && \
-    apt-get install -y iputils-ping libevent-dev zlib1g-dev wget && \
+    apt-get install -yqq iputils-ping libevent-dev zlib1g-dev wget libmemcached-dev librabbitmq-dev && \
     pecl channel-update pecl.php.net && \
     groupadd -g ${PGID} devdock && \
     useradd -u ${PUID} -g devdock -m devdock -G docker_env -s /bin/bash && \
@@ -133,10 +153,10 @@ USER root
 ARG INSTALL_AMQP=false
 
 RUN if [ ${INSTALL_AMQP} = true ]; then \
-    apt-get install librabbitmq-dev -y && \
-    pecl -q install amqp && \
-    echo "extension=amqp.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/amqp.ini && \
-    ln -s /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/amqp.ini /etc/php/${DEVDOCK_PHP_VERSION}/cli/conf.d/30-amqp.ini \
+    pecl -q install -o -f amqp && \
+    # echo "extension=amqp.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/amqp.ini && \
+    # ln -s /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/amqp.ini /etc/php/${DEVDOCK_PHP_VERSION}/cli/conf.d/30-amqp.ini \
+    phpenmod amqp \
 ;fi
 
 ###########################################################################
@@ -148,8 +168,12 @@ ARG INSTALL_PHPREDIS=false
 
 RUN if [ ${INSTALL_PHPREDIS} = true ]; then \
     # Install Php Redis extension
-    printf "\n" | pecl -q install -o -f redis && \
-    echo "extension=redis.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/redis.ini && \
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        printf "\n" | pecl -q install -o -f redis-4.2.0; \
+    else \
+        printf "\n" | pecl -q install -o -f redis; \
+    fi && \
+    # echo "extension=redis.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/redis.ini && \
     phpenmod redis \
 ;fi
 
@@ -163,26 +187,25 @@ ARG INSTALL_SWOOLE=false
 RUN if [ ${INSTALL_SWOOLE} = true ]; then \
     # Install Php Swoole Extension
     if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
-      pecl -q install swoole-2.0.11; \
+      pecl -q install -o -f swoole-2.0.11; \
     else \
       if [ $(php -r "echo PHP_MINOR_VERSION;") = "0" ]; then \
-        pecl install swoole-2.2.0; \
+        pecl install -o -f swoole-2.2.0; \
       else \
-        # pecl install swoole; \
+        # pecl -q install -o -f swoole; \
         cd /tmp && \
             wget https://pecl.php.net/get/swoole-4.4.16.tgz && \
             tar zxf swoole-4.4.16.tgz && \
             cd swoole-4.4.16  && \
             phpize  && \
             ./configure  --enable-openssl && \
-            make && make install \
-      ;fi \
-    ;fi && \
-    echo "extension=swoole.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/swoole.ini && \
-    echo "swoole.use_shortname = off" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/swoole.ini && \
-    ln -s /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/swoole.ini /etc/php/${DEVDOCK_PHP_VERSION}/cli/conf.d/20-swoole.ini \
+            make && make install && \
+            echo "extension=swoole.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/swoole.ini && \
+            echo "swoole.use_shortname = off" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/swoole.ini && \
+            ln -s /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/swoole.ini /etc/php/${DEVDOCK_PHP_VERSION}/cli/conf.d/20-swoole.ini \
+        ;fi \
+    ;fi \
 ;fi
-
 
 ###########################################################################
 # PHP MEMCACHED EXTENSION
@@ -192,11 +215,32 @@ USER root
 ARG INSTALL_MEMCACHED=false
 
 RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
-    apt-get install -y libmemcached-dev && \
-    # Install Php Redis extension
-    printf "\n" | pecl -q install -o -f memcached && \
+    # Install Php Memcached extension
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        printf "\n" | pecl -q install -o -f memcached-2.2.0; \
+    else \
+        printf "\n" | pecl -q install -o -f memcached; \
+    fi && \
     # echo "extension=memcached.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/memcached.ini && \
     phpenmod memcached \
+;fi
+
+###########################################################################
+# PHP MEMCACHE EXTENSION
+###########################################################################
+USER root
+
+ARG INSTALL_MEMCACHE=false
+
+RUN if [ ${INSTALL_MEMCACHE} = true ]; then \
+    # Install Php Memcache extension
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        printf "\n" | pecl -q install -o -f memcache-2.2.7; \
+    else \
+        printf "\n" | pecl -q install -o -f memcache; \
+    fi && \
+    # echo "extension=memcache.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/memcache.ini && \
+    phpenmod memcache \
 ;fi
 
 
