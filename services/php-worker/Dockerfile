@@ -18,6 +18,7 @@ RUN if [ ${CHANGE_SOURCE} = true ]; then \
 RUN apk --update add wget \
         cmake \
         curl \
+        curl-dev \
         git \
         build-base \
         libmemcached-dev \
@@ -28,9 +29,16 @@ RUN apk --update add wget \
         cyrus-sasl-dev \
         libgsasl-dev \
         libevent-dev \
-        supervisor
+        supervisor; \
+        if [ $(php -r "echo PHP_VERSION_ID - PHP_RELEASE_VERSION;") = "50600" ] || \
+            [ $(php -r "echo PHP_VERSION_ID - PHP_RELEASE_VERSION;") = "70000" ]; then \
+            apk --update add libressl libressl-dev; \
+        else \
+            apk --update add openssl-dev; \
+        fi
 
-RUN docker-php-ext-install mysqli \
+RUN pecl channel-update pecl.php.net; \
+    docker-php-ext-install mysqli \
         mbstring pdo \
         pdo_mysql \
         tokenizer \
@@ -38,7 +46,14 @@ RUN docker-php-ext-install mysqli \
         pcntl \
         sysvsem \
         sysvshm \
-        sysvmsg
+        sysvmsg; \
+        if [ $(php -r "echo PHP_VERSION_ID - PHP_RELEASE_VERSION;") = "80100" ] || \
+            [ $(php -r "echo PHP_VERSION_ID - PHP_RELEASE_VERSION;") = "80200" ]; then \
+            php -m | grep -oiE '^tokenizer$'; \
+        else \
+            docker-php-ext-install tokenizer; \
+        fi
+
 
 ###########################################################################
 # Set Timezone
@@ -71,21 +86,29 @@ RUN if [ ${INSTALL_AMQP} = true ]; then \
 ARG INSTALL_SWOOLE=false
 
 RUN if [ ${INSTALL_SWOOLE} = true ]; then \
-    # Install PHP Swoole Extension
+    # Install Php Redis extension
     if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
-        pecl -q install -o -f swoole-2.0.11 && \
-        docker-php-ext-enable swoole; \
+        SW_VERSION=v2.0.11; \
+    elif [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ]; then \
+        SW_VERSION=v4.8.13; \
     else \
-        cd /tmp && wget https://pecl.php.net/get/swoole-4.4.16.tgz && \
-        tar zxf swoole-4.4.16.tgz && \
-        cd swoole-4.4.16  && \
-        phpize  && \
-        ./configure  --enable-openssl && \
-        make && make install && \
-        docker-php-ext-enable swoole && \
-        echo 'swoole.use_shortname = off' >> /usr/local/etc/php/php.ini && \
-        php --ri swoole; \
-    fi
+        SW_VERSION=v5.0.3; \
+    fi \
+    && cd /tmp \
+    && curl -SL "https://github.com/swoole/swoole-src/archive/${SW_VERSION}.tar.gz" -o swoole.tar.gz \
+    && ls -alh \
+    # php extension:swoole
+    && cd /tmp \
+    && mkdir -p swoole \
+    && tar -xf swoole.tar.gz -C swoole --strip-components=1 \
+    && ( \
+        cd swoole \
+        && phpize \
+        && ./configure --enable-openssl --enable-http2 --enable-swoole-curl --enable-swoole-json \
+        && make -s -j$(nproc) && make install \
+    ) \
+    && echo "swoole.use_shortname=off" >> /usr/local/etc/php/php.ini \
+    && docker-php-ext-enable swoole \
 ;fi
 
 ###########################################################################
@@ -102,39 +125,6 @@ RUN if [ ${INSTALL_PHPREDIS} = true ]; then \
         printf "\n" | pecl -q install -o -f redis; \
     fi && \
     docker-php-ext-enable redis \
-;fi
-
-###########################################################################
-# PHP MEMCACHED EXTENSION
-###########################################################################
-
-ARG INSTALL_MEMCACHED=false
-
-RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
-    # Install Php Redis extension
-    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
-        printf "\n" | pecl -q install -o -f memcached-3.0.4; \
-    else \
-        printf "\n" | pecl -q install -o -f memcached; \
-    fi &&\
-    docker-php-ext-enable memcached \
-;fi
-
-###########################################################################
-# PHP MEMCACHE EXTENSION
-###########################################################################
-
-ARG INSTALL_MEMCACHE=false
-
-RUN if [ ${INSTALL_MEMCACHE} = true ]; then \
-    # Install Php Memcache extension
-    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
-        printf "\n" | pecl -q install -o -f memcache-2.2.7; \
-    else \
-        printf "\n" | pecl -q install -o -f memcache; \
-    fi && \
-    # echo "extension=memcache.so" >> /etc/php/${DEVDOCK_PHP_VERSION}/mods-available/memcache.ini && \
-    phpenmod memcache \
 ;fi
 
 RUN rm /var/cache/apk/* \
