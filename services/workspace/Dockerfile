@@ -38,18 +38,23 @@ RUN if [ ${CHANGE_SOURCE} = true ]; then \
     rm -rf /tmp/sources.sh \
 ;fi
 
-RUN apt-get update \
-    && apt-get install -y wget \
-        iputils-ping \
-        libevent-dev \
-        librabbitmq-dev \
-        libssl-dev
-
 # always run apt update when start and after add new source list, then clean up at end.
 RUN pecl channel-update pecl.php.net && \
     groupadd -g ${PGID} devdock && \
     useradd -u ${PUID} -g devdock -m devdock -G docker_env -s /bin/bash && \
     usermod -p "*" devdock
+
+RUN apt-get update -yqq \
+    && apt-get install -y --allow-downgrades --reinstall zlib1g=1:1.2.11.dfsg-0ubuntu2.2 \
+    && apt-get install -y apt-utils \
+        wget \
+        zlib1g-dev libzip-dev zip unzip \
+        # Install the zip extension
+        php${DEVDOCK_PHP_VERSION}-zip \
+        iputils-ping \
+        libevent-dev \
+        librabbitmq-dev \
+        libssl-dev
 
 ###########################################################################
 # Set Timezone
@@ -93,8 +98,25 @@ USER root
 # Add the composer.json
 COPY ./composer.json /home/devdock/.composer/composer.json
 
+# Add the auth.json for magento 2 credentials
+COPY ./auth.json /home/laradock/.composer/auth.json
+
 # Make sure that ~/.composer belongs to devdock
 RUN chown -R devdock:devdock /home/devdock/.composer
+
+# Export composer vendor path
+RUN echo "" >> ~/.bashrc && \
+    echo 'export PATH="~/.composer/vendor/bin:$PATH"' >> ~/.bashrc
+
+# Update composer
+ARG COMPOSER_VERSION=2
+ENV COMPOSER_VERSION ${COMPOSER_VERSION}
+RUN set -eux; \
+      if [ "$COMPOSER_VERSION" = "1" ] || [ "$COMPOSER_VERSION" = "2" ]; then \
+          composer self-update --${COMPOSER_VERSION}; \
+      else \
+          composer self-update ${COMPOSER_VERSION}; \
+      fi
 
 USER devdock
 
@@ -113,10 +135,6 @@ ENV COMPOSER_REPO_PACKAGIST ${COMPOSER_REPO_PACKAGIST}
 RUN if [ ${COMPOSER_REPO_PACKAGIST} ]; then \
     composer config -g repo.packagist composer ${COMPOSER_REPO_PACKAGIST} \
 ;fi
-
-# Export composer vendor path
-RUN echo "" >> ~/.bashrc && \
-    echo 'export PATH="~/.composer/vendor/bin:$PATH"' >> ~/.bashrc
 
 ###########################################################################
 # Crontab
